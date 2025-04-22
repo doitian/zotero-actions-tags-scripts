@@ -110,7 +110,7 @@ async function save(item) {
   const title = item.getField("title");
   const fileName = [
     formatAuthorInTitle(item.getCreators()),
-    safeFileName(title) + " (Annotations)",
+    safeFileName(title),
   ].join(" - ");
   const noteContent = await formatNote(fileName, item);
   const path = [getBaseDirectory(), fileName + ".md"].join(PATH_SEPARATOR);

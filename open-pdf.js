@@ -4,6 +4,7 @@
 // Menu Label: Open PDF
 // Menu:
 // - In Item Menu
+// - In Reader Menu
 /**
  * Open PDFs with the system default
  * @author Y.D.X.

@@ -35,6 +35,9 @@ async function exportCollection(collection, baseDir) {
 }
 
 async function exportItem(item, baseDir) {
+  if (item.isLinkedFileAttachment()) {
+    return;
+  }
   if (item.isAttachment()) {
     await exportAttachment(item, baseDir);
   } else if (item.isRegularItem()) {

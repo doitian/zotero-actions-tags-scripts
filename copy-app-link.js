@@ -5,6 +5,7 @@
 // Menu:
 // - In Item Menu
 // - In Collection Menu
+// - In Annotation Menu
 
 // @author windingwind, garth74
 // @link https://github.com/windingwind/zotero-actions-tags/discussions/115
@@ -26,7 +27,7 @@ let useColl = false;
 let useNoteLink = false;
 
 /** @type {'select' | 'open-pdf' | 'auto'} Action of link*/
-let linkAction = "select"; // auto = open-pdf for PDFs and annotations, select for everything else
+let linkAction = "auto"; // auto = open-pdf for PDFs and annotations, select for everything else
 
 // END OF EDITABLE SETTINGS
 

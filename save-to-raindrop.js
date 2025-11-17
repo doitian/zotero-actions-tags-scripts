@@ -22,11 +22,7 @@ function formatAuthor(creators) {
 }
 
 async function save(item) {
-  let note = `[Open in Zotero](https://www.zotero.org/${ZOTERO_USERNAME}/items/${item.getField("key")})`;
-  const abstract = item.getField("abstractNote")?.trim() || "";
-  if (abstract !== "") {
-    note += "\n\n" + abstract;
-  }
+  let note = item.getField("abstractNote")?.trim() || "";
 
   const excerpt = [];
   const date = item.getField("date")?.trim() || "";

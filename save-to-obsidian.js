@@ -83,9 +83,6 @@ async function formatNote(fileName, item) {
   lines.push(
     `**Zotero App Link**:: [Open in Zotero](zotero://select/library/items/${key})`,
   );
-  lines.push(
-    `**Zotero Web Link**:: [zotero.org](https://www.zotero.org/${ZOTERO_USERNAME}/items/${key})`,
-  );
 
   const abstract = item.getField("abstractNote")?.trim() || "";
   if (abstract !== "") {

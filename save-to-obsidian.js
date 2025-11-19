@@ -16,6 +16,43 @@ function log(message) {
   Zotero.debug(`[Save to Obsidian] ${message}`);
 }
 
+const titleCase = (() => {
+  const stopwords = "a an and at but by for in nor of on or so the to up yet";
+  const defaults = stopwords.split(" ");
+
+  const capitalize = function (str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  return function (str, options) {
+    const opts = options || {};
+
+    if (!str) return "";
+
+    const stop = opts.stopwords || defaults;
+    const keep = opts.keepSpaces;
+    const splitter = /(\s+|[-‑–—])/;
+
+    return str
+      .split(splitter)
+      .map((word, index, all) => {
+        if (word.match(/\s+/)) return keep ? word : " ";
+        if (word.match(splitter)) return word;
+
+        if (
+          index !== 0 &&
+            index !== all.length - 1 &&
+            stop.includes(word.toLowerCase())
+        ) {
+          return word.toLowerCase();
+        }
+
+        return capitalize(word);
+      })
+      .join("");
+  };
+})();
+
 function safeFileName(title) {
   return title
     .replaceAll(":", "")
@@ -77,7 +114,7 @@ async function formatNote(fileName, item) {
   let url = item.getField("url");
   if (url !== null && url !== undefined && url !== "") {
     const domain = url.split("://", 2)[1].split("/", 2)[0];
-    lines.push(`'**URL**:: [${domain}](${url})`);
+    lines.push(`**URL**:: [${domain}](${url})`);
   }
 
   lines.push(
@@ -107,7 +144,7 @@ function getBaseDirectory() {
 }
 
 async function save(item) {
-  const title = item.getField("title");
+  const title = titleCase(item.getField("title"));
   const fileName = [
     formatAuthorInTitle(item.getCreators()),
     safeFileName(title),

@@ -58,7 +58,8 @@ async function formatNote(fileName, title, item) {
 
   const lines = [
     "---",
-    `aliases: [${citationKey}]`,
+    "aliases:",
+    `  - "@${citationKey}"`,
     "---",
     `# ${fileName}\n`,
     "## Metadata\n",
@@ -73,10 +74,18 @@ async function formatNote(fileName, title, item) {
     `**Document Tags**:: ${formatTags(item.getTags())}`,
   ];
 
-  let url = item.getField("url");
+  const url = item.getField("url");
   if (url !== null && url !== undefined && url !== "") {
     const domain = url.split("://", 2)[1].split("/", 2)[0];
     lines.push(`**URL**:: [${domain}](${url})`);
+  }
+  const doi = item.getField("DOI");
+  if (doi !== null && doi !== undefined && doi !== "") {
+    lines.push(`**DOI**:: [doi.org](https://doi.org/${doi})`);
+  }
+  const publisher = item.getField("publisher") || item.getField("publicationTitle");
+  if (publisher !== null && publisher !== undefined && publisher !== "") {
+    lines.push(`**Publisher**:: [[${publisher}]]`);
   }
 
   lines.push(
@@ -97,7 +106,7 @@ async function formatNote(fileName, title, item) {
 
 function getBaseDirectory() {
   let rootDir = Zotero.Prefs.get("extensions.zotero.baseAttachmentPath", true);
-  // Ensure the baseDir ends with a path separator
+  // Ensure the `rootDir` ends with a path separator
   if (!rootDir.endsWith(PATH_SEPARATOR)) {
     rootDir += PATH_SEPARATOR;
   }

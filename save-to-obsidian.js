@@ -134,6 +134,8 @@ async function save(item) {
     parentItemID: item.id,
     libraryID: item.libraryID,
   });
+  item.addTag("to/obsidian");
+  await item.saveTx();
 }
 
 async function main(items) {

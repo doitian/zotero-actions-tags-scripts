@@ -44,6 +44,40 @@ function formatTags(tags) {
   return "#" + tags.map((t) => t.tag).join(" #");
 }
 
+function formatDomain(url) {
+  return url
+    .replace(/^[a-z]+:\/\//i, "")
+    .split("/", 1)[0]
+    .replace(/^www\./i, "");
+}
+
+async function formatWebLinkAttachments(item) {
+  const attachmentIDs = item.getAttachments();
+  if (!attachmentIDs || attachmentIDs.length === 0) {
+    return [];
+  }
+
+  const attachments = await Zotero.Items.getAsync(attachmentIDs);
+  const lines = [];
+  for (const attachment of attachments) {
+    if (
+      attachment.attachmentLinkMode !== Zotero.Attachments.LINK_MODE_LINKED_URL
+    ) {
+      continue;
+    }
+    const url = attachment.getField("url");
+    if (!url) {
+      continue;
+    }
+    const title = attachment.getField("title")?.trim();
+    if (!title) {
+      continue;
+    }
+    lines.push(`**${title}**:: <a href="${url}">${formatDomain(url)}</a>`);
+  }
+  return lines;
+}
+
 async function formatNote(fileName, title, item) {
   const key = item.getField("key");
   const citationKey = item.getField("citationKey");
@@ -79,6 +113,8 @@ async function formatNote(fileName, title, item) {
     const domain = url.split("://", 2)[1].split("/", 2)[0];
     lines.push(`**URL**:: [${domain}](${url})`);
   }
+  const webLinkAttachments = await formatWebLinkAttachments(item);
+  lines.push(...webLinkAttachments);
   const doi = item.getField("DOI");
   if (doi !== null && doi !== undefined && doi !== "") {
     lines.push(`**DOI**:: [doi.org](https://doi.org/${doi})`);

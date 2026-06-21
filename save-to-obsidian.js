@@ -60,6 +60,9 @@ function isHTTPURL(url) {
 }
 
 function escapeHTML(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -130,7 +133,7 @@ async function formatNote(fileName, title, item) {
   ];
 
   const url = item.getField("url");
-  if (url !== null && url !== undefined && url !== "" && isHTTPURL(url)) {
+  if (url && isHTTPURL(url)) {
     lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);

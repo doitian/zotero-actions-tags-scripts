@@ -55,10 +55,6 @@ function formatDomain(url) {
     .replace(/^www\./i, "");
 }
 
-function isHTTPURL(url) {
-  return /^https?:\/\//i.test(url);
-}
-
 function escapeMarkdown(value) {
   if (typeof value !== "string") {
     return "";
@@ -89,7 +85,7 @@ async function formatWebLinkAttachments(item) {
       continue;
     }
     const url = attachment.getField("url");
-    if (!url || !isHTTPURL(url)) {
+    if (!url) {
       continue;
     }
     const titleField = attachment.getField("title");
@@ -135,7 +131,7 @@ async function formatNote(fileName, title, item) {
   ];
 
   const url = item.getField("url");
-  if (url && isHTTPURL(url)) {
+  if (url) {
     lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);

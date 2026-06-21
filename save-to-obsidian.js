@@ -86,7 +86,8 @@ async function formatWebLinkAttachments(item) {
     if (!url || !isHTTPURL(url)) {
       continue;
     }
-    const title = attachment.getField("title")?.trim();
+    const titleField = attachment.getField("title");
+    const title = titleField ? titleField.trim() : "";
     if (!title) {
       continue;
     }
@@ -130,9 +131,7 @@ async function formatNote(fileName, title, item) {
 
   const url = item.getField("url");
   if (url !== null && url !== undefined && url !== "" && isHTTPURL(url)) {
-    const escapedURL = escapeHTML(url);
-    const escapedDomain = escapeHTML(formatDomain(url));
-    lines.push(`**URL**:: <a href="${escapedURL}">${escapedDomain}</a>`);
+    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);
   lines.push(...webLinkAttachments);

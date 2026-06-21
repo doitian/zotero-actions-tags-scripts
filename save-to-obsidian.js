@@ -59,16 +59,19 @@ function isHTTPURL(url) {
   return /^https?:\/\//i.test(url);
 }
 
-function escapeHTML(value) {
+function escapeMarkdown(value) {
   if (typeof value !== "string") {
     return "";
   }
   return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .replaceAll("\\", "\\\\")
+    .replaceAll("*", "\\*")
+    .replaceAll("_", "\\_")
+    .replaceAll("[", "\\[")
+    .replaceAll("]", "\\]")
+    .replaceAll("(", "\\(")
+    .replaceAll(")", "\\)")
+    .replaceAll("`", "\\`");
 }
 
 async function formatWebLinkAttachments(item) {
@@ -94,10 +97,9 @@ async function formatWebLinkAttachments(item) {
     if (!title) {
       continue;
     }
-    const escapedTitle = escapeHTML(title);
-    const escapedURL = escapeHTML(url);
-    const escapedDomain = escapeHTML(formatDomain(url));
-    lines.push(`**${escapedTitle}**:: <a href="${escapedURL}">${escapedDomain}</a>`);
+    const escapedTitle = escapeMarkdown(title);
+    const escapedDomain = escapeMarkdown(formatDomain(url));
+    lines.push(`**${escapedTitle}**:: [${escapedDomain}](<${url}>)`);
   }
   return lines;
 }

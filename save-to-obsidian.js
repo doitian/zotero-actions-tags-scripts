@@ -44,6 +44,62 @@ function formatTags(tags) {
   return "#" + tags.map((t) => t.tag).join(" #");
 }
 
+function formatDomain(url) {
+  if (!url || typeof url !== "string") {
+    return "";
+  }
+  return url
+    .trim()
+    .replace(/^[a-z]+:\/\//i, "")
+    .split("/", 1)[0]
+    .replace(/^www\./i, "");
+}
+
+function escapeMarkdown(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .replaceAll("\\", "\\\\")
+    .replaceAll("*", "\\*")
+    .replaceAll("_", "\\_")
+    .replaceAll("[", "\\[")
+    .replaceAll("]", "\\]")
+    .replaceAll("(", "\\(")
+    .replaceAll(")", "\\)")
+    .replaceAll("`", "\\`");
+}
+
+async function formatWebLinkAttachments(item) {
+  const attachmentIDs = item.getAttachments();
+  if (!attachmentIDs || attachmentIDs.length === 0) {
+    return [];
+  }
+
+  const attachments = await Zotero.Items.getAsync(attachmentIDs);
+  const lines = [];
+  for (const attachment of attachments) {
+    if (
+      attachment.attachmentLinkMode !== Zotero.Attachments.LINK_MODE_LINKED_URL
+    ) {
+      continue;
+    }
+    const url = attachment.getField("url");
+    if (!url) {
+      continue;
+    }
+    const titleField = attachment.getField("title");
+    const title = titleField ? titleField.trim() : "";
+    if (!title) {
+      continue;
+    }
+    const escapedTitle = escapeMarkdown(title);
+    const domain = formatDomain(url);
+    lines.push(`**${escapedTitle}**:: [${domain}](${url})`);
+  }
+  return lines;
+}
+
 async function formatNote(fileName, title, item) {
   const key = item.getField("key");
   const citationKey = item.getField("citationKey");
@@ -75,10 +131,11 @@ async function formatNote(fileName, title, item) {
   ];
 
   const url = item.getField("url");
-  if (url !== null && url !== undefined && url !== "") {
-    const domain = url.split("://", 2)[1].split("/", 2)[0];
-    lines.push(`**URL**:: [${domain}](${url})`);
+  if (url) {
+    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
+  const webLinkAttachments = await formatWebLinkAttachments(item);
+  lines.push(...webLinkAttachments);
   const doi = item.getField("DOI");
   if (doi !== null && doi !== undefined && doi !== "") {
     lines.push(`**DOI**:: [doi.org](https://doi.org/${doi})`);

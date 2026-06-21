@@ -98,8 +98,8 @@ async function formatWebLinkAttachments(item) {
       continue;
     }
     const escapedTitle = escapeMarkdown(title);
-    const escapedDomain = escapeMarkdown(formatDomain(url));
-    lines.push(`**${escapedTitle}**:: [${escapedDomain}](<${url}>)`);
+    const domain = formatDomain(url);
+    lines.push(`**${escapedTitle}**:: [${domain}](${url})`);
   }
   return lines;
 }
@@ -136,7 +136,7 @@ async function formatNote(fileName, title, item) {
 
   const url = item.getField("url");
   if (url && isHTTPURL(url)) {
-    lines.push(`**URL**:: [${formatDomain(url)}](<${url}>)`);
+    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);
   lines.push(...webLinkAttachments);

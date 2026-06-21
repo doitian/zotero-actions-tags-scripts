@@ -45,7 +45,11 @@ function formatTags(tags) {
 }
 
 function formatDomain(url) {
+  if (!url || typeof url !== "string") {
+    return "";
+  }
   return url
+    .trim()
     .replace(/^[a-z]+:\/\//i, "")
     .split("/", 1)[0]
     .replace(/^www\./i, "");
@@ -110,8 +114,7 @@ async function formatNote(fileName, title, item) {
 
   const url = item.getField("url");
   if (url !== null && url !== undefined && url !== "") {
-    const domain = url.split("://", 2)[1].split("/", 2)[0];
-    lines.push(`**URL**:: [${domain}](${url})`);
+    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);
   lines.push(...webLinkAttachments);

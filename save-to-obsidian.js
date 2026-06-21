@@ -136,7 +136,7 @@ async function formatNote(fileName, title, item) {
 
   const url = item.getField("url");
   if (url && isHTTPURL(url)) {
-    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
+    lines.push(`**URL**:: [${formatDomain(url)}](<${url}>)`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);
   lines.push(...webLinkAttachments);

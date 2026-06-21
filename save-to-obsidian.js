@@ -55,6 +55,19 @@ function formatDomain(url) {
     .replace(/^www\./i, "");
 }
 
+function isHTTPURL(url) {
+  return /^https?:\/\//i.test(url);
+}
+
+function escapeHTML(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 async function formatWebLinkAttachments(item) {
   const attachmentIDs = item.getAttachments();
   if (!attachmentIDs || attachmentIDs.length === 0) {
@@ -70,14 +83,17 @@ async function formatWebLinkAttachments(item) {
       continue;
     }
     const url = attachment.getField("url");
-    if (!url) {
+    if (!url || !isHTTPURL(url)) {
       continue;
     }
     const title = attachment.getField("title")?.trim();
     if (!title) {
       continue;
     }
-    lines.push(`**${title}**:: <a href="${url}">${formatDomain(url)}</a>`);
+    const escapedTitle = escapeHTML(title);
+    const escapedURL = escapeHTML(url);
+    const escapedDomain = escapeHTML(formatDomain(url));
+    lines.push(`**${escapedTitle}**:: <a href="${escapedURL}">${escapedDomain}</a>`);
   }
   return lines;
 }
@@ -113,8 +129,10 @@ async function formatNote(fileName, title, item) {
   ];
 
   const url = item.getField("url");
-  if (url !== null && url !== undefined && url !== "") {
-    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
+  if (url !== null && url !== undefined && url !== "" && isHTTPURL(url)) {
+    const escapedURL = escapeHTML(url);
+    const escapedDomain = escapeHTML(formatDomain(url));
+    lines.push(`**URL**:: <a href="${escapedURL}">${escapedDomain}</a>`);
   }
   const webLinkAttachments = await formatWebLinkAttachments(item);
   lines.push(...webLinkAttachments);

@@ -24,6 +24,9 @@ function safeFileName(title) {
 }
 
 function formatAuthorInTitle(creators) {
+  if (creators.length === 0) {
+    return "";
+  }
   if (creators.length === 1) {
     return creators[0].lastName;
   }
@@ -31,73 +34,50 @@ function formatAuthorInTitle(creators) {
 }
 
 function formatAuthorInMetadata(creators) {
-  return (
-    "[[" +
-    creators
-      .map((e) => safeFileName(`${e.firstName} ${e.lastName}`.trim()))
-      .join("]], [[") +
-    "]]"
-  );
+  const authors = creators
+    .map((creator) =>
+      safeFileName(
+        [creator.firstName, creator.lastName].filter(Boolean).join(" ").trim(),
+      ),
+    )
+    .filter(Boolean)
+    .map((name) => `[[${name}]]`);
+  return authors.length ? authors : null;
 }
 
-function formatTags(tags) {
-  return "#" + tags.map((t) => t.tag).join(" #");
+function yamlValue(value) {
+  return JSON.stringify(value)
+    .replaceAll("\u0085", "\\u0085")
+    .replaceAll("\u2028", "\\u2028")
+    .replaceAll("\u2029", "\\u2029");
 }
 
-function formatDomain(url) {
-  if (!url || typeof url !== "string") {
-    return "";
-  }
-  return url
-    .trim()
-    .replace(/^[a-z]+:\/\//i, "")
-    .split("/", 1)[0]
-    .replace(/^www\./i, "");
+function formatMetadata(properties) {
+  return Array.from(properties, ([key, value]) => {
+    if (Array.isArray(value) && value.length) {
+      return `${yamlValue(key)}:\n${value.map((entry) => `  - ${yamlValue(entry)}`).join("\n")}`;
+    }
+    return `${yamlValue(key)}: ${yamlValue(value)}`;
+  }).join("\n");
 }
 
-function escapeMarkdown(value) {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value
-    .replaceAll("\\", "\\\\")
-    .replaceAll("*", "\\*")
-    .replaceAll("_", "\\_")
-    .replaceAll("[", "\\[")
-    .replaceAll("]", "\\]")
-    .replaceAll("(", "\\(")
-    .replaceAll(")", "\\)")
-    .replaceAll("`", "\\`");
-}
-
-async function formatWebLinkAttachments(item) {
+async function webLinkProperties(item) {
   const attachmentIDs = item.getAttachments();
-  if (!attachmentIDs || attachmentIDs.length === 0) {
+  if (!attachmentIDs?.length) {
     return [];
   }
-
   const attachments = await Zotero.Items.getAsync(attachmentIDs);
-  const lines = [];
-  for (const attachment of attachments) {
-    if (
-      attachment.attachmentLinkMode !== Zotero.Attachments.LINK_MODE_LINKED_URL
-    ) {
-      continue;
-    }
-    const url = attachment.getField("url");
-    if (!url) {
-      continue;
-    }
-    const titleField = attachment.getField("title");
-    const title = titleField ? titleField.trim() : "";
-    if (!title) {
-      continue;
-    }
-    const escapedTitle = escapeMarkdown(title);
-    const domain = formatDomain(url);
-    lines.push(`**${escapedTitle}**:: [${domain}](${url})`);
-  }
-  return lines;
+  return attachments
+    .filter(
+      (attachment) =>
+        attachment.attachmentLinkMode ===
+        Zotero.Attachments.LINK_MODE_LINKED_URL,
+    )
+    .map((attachment) => [
+      attachment.getField("title")?.trim(),
+      attachment.getField("url"),
+    ])
+    .filter(([title, url]) => title && url);
 }
 
 async function formatNote(fileName, title, item) {
@@ -111,50 +91,80 @@ async function formatNote(fileName, title, item) {
   const day = String(now.getDate()).padStart(2, "0");
   const created = `${year}-${month}-${day}`;
   const category = item.itemType === "book" ? "book" : "article";
-
-  const lines = [
-    "---",
-    "aliases:",
-    `  - "@${citationKey}"`,
-    "---",
-    `# ${fileName}\n`,
-    "## Metadata\n",
-    "**Source**:: #from/zotero",
-    "**Zettel**:: #zettel/fleeting",
-    "**Status**:: #x",
-    `**Authors**:: ${formatAuthorInMetadata(creators)}`,
-    `**Full Title**:: ${title}`,
-    `**Category**:: #${category}`,
-    `**Date**:: [[${item.getField("date")}]]`,
-    `**Created**:: [[${created}]]`,
-    `**Document Tags**:: ${formatTags(item.getTags())}`,
-  ];
+  const date = item.getField("date");
+  const tags = item
+    .getTags()
+    .map((tag) => tag.tag)
+    .filter(Boolean);
+  const properties = new Map([
+    ["aliases", citationKey ? [`@${citationKey}`] : []],
+    ["Source", "#from/zotero"],
+    ["Zettel", "#zettel/fleeting"],
+    ["Status", "#x"],
+    ["Authors", formatAuthorInMetadata(creators)],
+    ["Full Title", title],
+    ["Category", `#${category}`],
+    ["Date", date ? `[[${date}]]` : null],
+    ["Created", `[[${created}]]`],
+    ["Document Tags", tags.map((tag) => `#${tag}`)],
+  ]);
 
   const url = item.getField("url");
   if (url) {
-    lines.push(`**URL**:: [${formatDomain(url)}](${url})`);
+    properties.set("URL", url);
   }
-  const webLinkAttachments = await formatWebLinkAttachments(item);
-  lines.push(...webLinkAttachments);
   const doi = item.getField("DOI");
   if (doi !== null && doi !== undefined && doi !== "") {
-    lines.push(`**DOI**:: [doi.org](https://doi.org/${doi})`);
+    properties.set("DOI", `https://doi.org/${doi}`);
   }
-  const publisher = item.getField("publisher") || item.getField("publicationTitle");
+  const publisher =
+    item.getField("publisher") || item.getField("publicationTitle");
   if (publisher !== null && publisher !== undefined && publisher !== "") {
-    lines.push(`**Publisher**:: [[${publisher}]]`);
+    properties.set("Publisher", `[[${publisher}]]`);
+  }
+  properties.set("Zotero App Link", `zotero://select/library/items/${key}`);
+  properties.set(
+    "Zotero Web Link",
+    `https://www.zotero.org/${ZOTERO_USERNAME}/items/${key}`,
+  );
+  properties.set(
+    "tags",
+    Array.from(
+      new Set(["from/zotero", "zettel/fleeting", "x", category, ...tags]),
+    ),
+  );
+
+  const reserved = new Set([
+    ...Array.from(properties.keys(), (name) => name.toLowerCase()),
+    "url",
+    "doi",
+    "publisher",
+  ]);
+  const attachmentNames = new Map();
+  for (const [name, link] of await webLinkProperties(item)) {
+    const normalized = name.toLowerCase();
+    if (reserved.has(normalized)) {
+      throw new Error(
+        `Web-link attachment property conflicts with metadata: ${name}`,
+      );
+    }
+    const firstName = attachmentNames.get(normalized);
+    if (firstName !== undefined) {
+      const current = properties.get(firstName);
+      properties.set(firstName, [
+        ...(Array.isArray(current) ? current : [current]),
+        link,
+      ]);
+    } else {
+      attachmentNames.set(normalized, name);
+      properties.set(name, link);
+    }
   }
 
-  lines.push(
-    `**Zotero App Link**:: [Open in Zotero](zotero://select/library/items/${key})`,
-  );
-  lines.push(
-    `**Zotero Web Link**:: [zotero.org](https://www.zotero.org/${ZOTERO_USERNAME}/items/${key})`,
-  );
-
+  const lines = ["---", formatMetadata(properties), "---", `# ${fileName}\n`];
   const abstract = item.getField("abstractNote")?.trim() || "";
   if (abstract !== "") {
-    lines.push("\n## Abstract\n");
+    lines.push("## Abstract\n");
     lines.push(abstract);
   }
 
@@ -176,8 +186,9 @@ async function save(item) {
   const fileName = [
     formatAuthorInTitle(item.getCreators()),
     safeFileName(title),
-  ].join(" - ");
-  const noteContent = await formatNote(fileName, title, item);
+  ]
+    .filter(Boolean)
+    .join(" - ");
   const path = [getBaseDirectory(), fileName + ".md"].join(PATH_SEPARATOR);
   const newFile = Zotero.File.pathToFile(path);
   if (newFile.exists()) {
@@ -185,6 +196,7 @@ async function save(item) {
     return;
   }
 
+  const noteContent = await formatNote(fileName, title, item);
   await Zotero.File.putContentsAsync(newFile, noteContent);
   await Zotero.Attachments.linkFromFile({
     file: newFile,

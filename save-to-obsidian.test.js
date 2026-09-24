@@ -145,15 +145,10 @@ test("all book metadata is frontmatter; body keeps title and abstract", async ()
   const { properties, body } = await render(item);
   expect(properties).toEqual({
     aliases: ["@axler2020LinearAlgebra"],
-    Source: "#from/zotero",
-    Zettel: "#zettel/fleeting",
-    Status: "#x",
     Authors: ["[[Sheldon Axler]]"],
     "Full Title": "Linear Algebra Done Right",
-    Category: "#book",
     Date: "[[2020-05]]",
     Created: "[[2024-02-29]]",
-    "Document Tags": ["#math", "#open-access", "#math"],
     URL: "https://linear.axler.net/",
     DOI: "https://doi.org/10.123/example",
     Publisher: "[[Example Publisher]]",
@@ -187,7 +182,8 @@ test("multiple authors, corporate authors, and article publication fallback", as
   );
   expect(properties.Authors).toEqual(["[[Alice Smith]]", "[[研究会]]"]);
   expect(properties.Publisher).toBe("[[Journal: Research]]");
-  expect(properties.Category).toBe("#article");
+  expect(properties.tags).toContain("article");
+  expect(properties).not.toHaveProperty("Category");
 });
 
 test("missing metadata uses null/empty lists without fabricated links", async () => {
@@ -197,7 +193,8 @@ test("missing metadata uses null/empty lists without fabricated links", async ()
   expect(properties.Authors).toBeNull();
   expect(properties.Date).toBeNull();
   expect(properties.aliases).toEqual([]);
-  expect(properties["Document Tags"]).toEqual([]);
+  expect(properties).not.toHaveProperty("Document Tags");
+  expect(properties.tags).toEqual(["from/zotero", "zettel/fleeting", "x", "book"]);
   for (const key of ["URL", "DOI", "Publisher"])
     expect(properties).not.toHaveProperty(key);
   expect(body).toBe("# Test note\n");
@@ -276,6 +273,8 @@ for (const name of [
   "DOI",
   "Publisher",
   "Source",
+  "Zettel",
+  "Category",
   "Status",
   "Created",
   "Document Tags",

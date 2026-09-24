@@ -98,15 +98,10 @@ async function formatNote(fileName, title, item) {
     .filter(Boolean);
   const properties = new Map([
     ["aliases", citationKey ? [`@${citationKey}`] : []],
-    ["Source", "#from/zotero"],
-    ["Zettel", "#zettel/fleeting"],
-    ["Status", "#x"],
     ["Authors", formatAuthorInMetadata(creators)],
     ["Full Title", title],
-    ["Category", `#${category}`],
     ["Date", date ? `[[${date}]]` : null],
     ["Created", `[[${created}]]`],
-    ["Document Tags", tags.map((tag) => `#${tag}`)],
   ]);
 
   const url = item.getField("url");
@@ -139,6 +134,11 @@ async function formatNote(fileName, title, item) {
     "url",
     "doi",
     "publisher",
+    "source",
+    "zettel",
+    "status",
+    "category",
+    "document tags",
   ]);
   const attachmentNames = new Map();
   for (const [name, link] of await webLinkProperties(item)) {

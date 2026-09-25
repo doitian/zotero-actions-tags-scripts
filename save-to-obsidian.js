@@ -110,8 +110,6 @@ async function formatNote(fileName, title, item) {
     ["full-title", title],
     ["date", date ? `[[${date}]]` : null],
     ["created", `[[${created}]]`],
-    ["status", "x"],
-    ["zettel", "fleeting"],
   ]);
 
   const url = item.getField("url");
@@ -134,7 +132,7 @@ async function formatNote(fileName, title, item) {
   );
   properties.set(
     "tags",
-    Array.from(new Set(["from/zotero", category, ...tags])),
+    Array.from(new Set(["x", "zettel/fleeting", "from/zotero", category, ...tags])),
   );
 
   const reserved = new Set([
@@ -144,6 +142,8 @@ async function formatNote(fileName, title, item) {
     "publisher",
     "source",
     "kind",
+    "status",
+    "zettel",
     "category",
     "document-tags",
   ]);

@@ -149,14 +149,12 @@ test("all book metadata is frontmatter; body keeps title and abstract", async ()
     "full-title": "Linear Algebra Done Right",
     date: "[[2020-05]]",
     created: "[[2024-02-29]]",
-    status: "x",
-    zettel: "fleeting",
     url: "https://linear.axler.net/",
     doi: "https://doi.org/10.123/example",
     publisher: "[[Example Publisher]]",
     "zotero-app-link": "zotero://select/library/items/ABC123",
     "zotero-web-link": "https://www.zotero.org/ianyi/items/ABC123",
-    tags: ["from/zotero", "book", "math", "open-access"],
+    tags: ["x", "zettel/fleeting", "from/zotero", "book", "math", "open-access"],
   });
   expect(body).toBe(
     "# Test note\n\n## Abstract\n\nAn abstract.\n\nSecond paragraph.",
@@ -190,9 +188,9 @@ test("missing metadata uses null/empty lists without fabricated links", async ()
   expect(properties.date).toBeNull();
   expect(properties.aliases).toEqual([]);
   expect(properties).not.toHaveProperty("document-tags");
-  expect(properties.status).toBe("x");
-  expect(properties.zettel).toBe("fleeting");
-  expect(properties.tags).toEqual(["from/zotero", "book"]);
+  expect(properties).not.toHaveProperty("status");
+  expect(properties).not.toHaveProperty("zettel");
+  expect(properties.tags).toEqual(["x", "zettel/fleeting", "from/zotero", "book"]);
   for (const key of ["url", "doi", "publisher"])
     expect(properties).not.toHaveProperty(key);
   expect(body).toBe("# Test note\n");
@@ -265,9 +263,9 @@ test("document tags retain meaning and order without becoming enums", async () =
   const { properties } = await render(makeItem({
     tags: ["app", "later", "zettel/permanent", "x", "x", "MixedCase", "mixedcase"],
   }));
-  expect(properties.tags).toEqual(["from/zotero", "book", "app", "later", "zettel/permanent", "x", "MixedCase", "mixedcase"]);
-  expect(properties.status).toBe("x");
-  expect(properties.zettel).toBe("fleeting");
+  expect(properties.tags).toEqual(["x", "zettel/fleeting", "from/zotero", "book", "app", "later", "zettel/permanent", "MixedCase", "mixedcase"]);
+  expect(properties).not.toHaveProperty("status");
+  expect(properties).not.toHaveProperty("zettel");
   expect(properties).not.toHaveProperty("kind");
 });
 
@@ -287,6 +285,13 @@ test("case-insensitive duplicates retain the first title's word boundaries", asy
   });
   expect(properties["code-url"]).toEqual(["https://example.org/0", "https://example.org/1", "https://example.org/2"]);
   expect(properties).not.toHaveProperty("codeurl");
+});
+
+test("existing kind paths are preserved without inferring kinds from flat document tags", async () => {
+  const tags = ["periodic/weekly", "obsidian/plugin", "zotero/note", "kind/app", "app"];
+  const { properties } = await render(makeItem({ tags }));
+  expect(properties.tags).toEqual(["x", "zettel/fleeting", "from/zotero", "book", ...tags]);
+  expect(properties).not.toHaveProperty("kind");
 });
 
 for (const titles of [["Code URL", "code-url"], ["CodeURL", "Code_URL"], ["APIReference", "API Reference"]]) {

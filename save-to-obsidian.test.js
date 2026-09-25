@@ -145,23 +145,18 @@ test("all book metadata is frontmatter; body keeps title and abstract", async ()
   const { properties, body } = await render(item);
   expect(properties).toEqual({
     aliases: ["@axler2020LinearAlgebra"],
-    Authors: ["[[Sheldon Axler]]"],
-    "Full Title": "Linear Algebra Done Right",
-    Date: "[[2020-05]]",
-    Created: "[[2024-02-29]]",
-    URL: "https://linear.axler.net/",
-    DOI: "https://doi.org/10.123/example",
-    Publisher: "[[Example Publisher]]",
-    "Zotero App Link": "zotero://select/library/items/ABC123",
-    "Zotero Web Link": "https://www.zotero.org/ianyi/items/ABC123",
-    tags: [
-      "from/zotero",
-      "zettel/fleeting",
-      "x",
-      "book",
-      "math",
-      "open-access",
-    ],
+    authors: ["[[Sheldon Axler]]"],
+    "full-title": "Linear Algebra Done Right",
+    date: "[[2020-05]]",
+    created: "[[2024-02-29]]",
+    status: "x",
+    zettel: "fleeting",
+    url: "https://linear.axler.net/",
+    doi: "https://doi.org/10.123/example",
+    publisher: "[[Example Publisher]]",
+    "zotero-app-link": "zotero://select/library/items/ABC123",
+    "zotero-web-link": "https://www.zotero.org/ianyi/items/ABC123",
+    tags: ["from/zotero", "book", "math", "open-access"],
   });
   expect(body).toBe(
     "# Test note\n\n## Abstract\n\nAn abstract.\n\nSecond paragraph.",
@@ -180,22 +175,25 @@ test("multiple authors, corporate authors, and article publication fallback", as
       ],
     }),
   );
-  expect(properties.Authors).toEqual(["[[Alice Smith]]", "[[研究会]]"]);
-  expect(properties.Publisher).toBe("[[Journal: Research]]");
+  expect(properties.authors).toEqual(["[[Alice Smith]]", "[[研究会]]"]);
+  expect(properties.publisher).toBe("[[Journal: Research]]");
   expect(properties.tags).toContain("article");
-  expect(properties).not.toHaveProperty("Category");
+  expect(properties).not.toHaveProperty("category");
+  expect(properties).not.toHaveProperty("kind");
 });
 
 test("missing metadata uses null/empty lists without fabricated links", async () => {
   const { properties, body } = await render(
     makeItem({ creators: [], fields: { date: "", citationKey: "" } }),
   );
-  expect(properties.Authors).toBeNull();
-  expect(properties.Date).toBeNull();
+  expect(properties.authors).toBeNull();
+  expect(properties.date).toBeNull();
   expect(properties.aliases).toEqual([]);
-  expect(properties).not.toHaveProperty("Document Tags");
-  expect(properties.tags).toEqual(["from/zotero", "zettel/fleeting", "x", "book"]);
-  for (const key of ["URL", "DOI", "Publisher"])
+  expect(properties).not.toHaveProperty("document-tags");
+  expect(properties.status).toBe("x");
+  expect(properties.zettel).toBe("fleeting");
+  expect(properties.tags).toEqual(["from/zotero", "book"]);
+  for (const key of ["url", "doi", "publisher"])
     expect(properties).not.toHaveProperty(key);
   expect(body).toBe("# Test note\n");
 });
@@ -218,18 +216,18 @@ for (const text of [
       {},
       text,
     );
-    expect(properties["Full Title"]).toBe(text);
+    expect(properties["full-title"]).toBe(text);
     expect(properties.aliases).toEqual(["@" + text]);
-    expect(properties.URL).toBe("https://example.org/?q=" + text);
+    expect(properties.url).toBe("https://example.org/?q=" + text);
   });
 }
 
-test("web attachments keep exact keys and URLs without Markdown escaping", async () => {
+test("web attachments use kebab keys without altering URLs or punctuation", async () => {
   const pairs = [
-    [" Code: [Archive] ", 'https://example.org/code?q="quoted"'],
-    ["__proto__", "https://example.org/proto"],
-    ["constructor", "custom://item/42"],
-    ["Mirror\n\u2028中文", "https://example.org/mirror"],
+    [" Code: [Archive] ", 'https://example.org/code?q="quoted"', "code:-[archive]"],
+    ["__proto__", "https://example.org/proto", "-proto-"],
+    ["constructor", "custom://item/42", "constructor"],
+    ["Mirror\n\u2028中文", "https://example.org/mirror", "mirror-中文"],
   ];
   const { properties } = await render(
     makeItem({ attachments: [1, 2, 3, 4, 5] }),
@@ -242,9 +240,9 @@ test("web attachments keep exact keys and URLs without Markdown escaping", async
       ],
     },
   );
-  for (const [title, url] of pairs) expect(properties[title.trim()]).toBe(url);
-  expect(properties).not.toHaveProperty("File");
-  expect(properties).not.toHaveProperty("Empty");
+  for (const [, url, key] of pairs) expect(properties[key]).toBe(url);
+  expect(properties).not.toHaveProperty("file");
+  expect(properties).not.toHaveProperty("empty");
 });
 
 test("repeated attachment titles merge case-insensitively without dropping URLs", async () => {
@@ -255,13 +253,55 @@ test("repeated attachment titles merge case-insensitively without dropping URLs"
       attachment("MIRROR", "https://example.org/1"),
     ],
   });
-  expect(properties.Mirror).toEqual([
+  expect(properties.mirror).toEqual([
     "https://example.org/1",
     "https://example.org/2",
     "https://example.org/1",
   ]);
-  expect(properties).not.toHaveProperty("mirror");
+  expect(properties).not.toHaveProperty("Mirror");
 });
+
+test("document tags retain meaning and order without becoming enums", async () => {
+  const { properties } = await render(makeItem({
+    tags: ["app", "later", "zettel/permanent", "x", "x", "MixedCase", "mixedcase"],
+  }));
+  expect(properties.tags).toEqual(["from/zotero", "book", "app", "later", "zettel/permanent", "x", "MixedCase", "mixedcase"]);
+  expect(properties.status).toBe("x");
+  expect(properties.zettel).toBe("fleeting");
+  expect(properties).not.toHaveProperty("kind");
+});
+
+test("acronyms, camel case, underscores and dollar markers stay distinct", async () => {
+  const titles = ["APIReference", "libraryID", "Code_URL", "$itemKey", "itemKey"];
+  const { properties } = await render(makeItem({ attachments: titles.map((_, i) => i) }), {
+    attachments: titles.map((title, i) => attachment(title, "https://example.org/" + i)),
+  });
+  for (const [i, key] of ["api-reference", "library-id", "code-url", "$item-key", "item-key"].entries()) {
+    expect(properties[key]).toBe("https://example.org/" + i);
+  }
+});
+
+test("case-insensitive duplicates retain the first title's word boundaries", async () => {
+  const { properties } = await render(makeItem({ attachments: [1, 2, 3] }), {
+    attachments: ["CodeURL", "CODEURL", "codeurl"].map((title, i) => attachment(title, "https://example.org/" + i)),
+  });
+  expect(properties["code-url"]).toEqual(["https://example.org/0", "https://example.org/1", "https://example.org/2"]);
+  expect(properties).not.toHaveProperty("codeurl");
+});
+
+for (const titles of [["Code URL", "code-url"], ["CodeURL", "Code_URL"], ["APIReference", "API Reference"]]) {
+  test(`reject normalization collision ${titles.join(" / ")} before writing`, async () => {
+    const item = makeItem({ attachments: [1, 2] });
+    const { api, calls } = await load({
+      attachments: titles.map((title, i) => attachment(title, "https://example.org/" + i)),
+    });
+    await expect(api.save(item)).rejects.toThrow("normalize to the same property");
+    expect(calls.writes).toEqual([]);
+    expect(calls.links).toEqual([]);
+    expect(item.addedTags).toEqual([]);
+    expect(item.saves).toBe(0);
+  });
+}
 
 for (const name of [
   "aliases",
@@ -279,6 +319,14 @@ for (const name of [
   "Created",
   "Document Tags",
   "Zotero App Link",
+  "full-title",
+  "fullTitle",
+  "Full_Title",
+  "zotero-app-link",
+  "ZoteroWebLink",
+  "document-tags",
+  "documentTags",
+  "kind",
 ]) {
   test(`reject reserved attachment property ${name} without side effects`, async () => {
     const item = makeItem({ attachments: [1] });

@@ -45,6 +45,14 @@ function formatAuthorInMetadata(creators) {
   return authors.length ? authors : null;
 }
 
+function propertyKey(name) {
+  return name
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/[\s_]+/g, "-")
+    .toLowerCase();
+}
+
 function yamlValue(value) {
   return JSON.stringify(value)
     .replaceAll("\u0085", "\\u0085")
@@ -98,35 +106,35 @@ async function formatNote(fileName, title, item) {
     .filter(Boolean);
   const properties = new Map([
     ["aliases", citationKey ? [`@${citationKey}`] : []],
-    ["Authors", formatAuthorInMetadata(creators)],
-    ["Full Title", title],
-    ["Date", date ? `[[${date}]]` : null],
-    ["Created", `[[${created}]]`],
+    ["authors", formatAuthorInMetadata(creators)],
+    ["full-title", title],
+    ["date", date ? `[[${date}]]` : null],
+    ["created", `[[${created}]]`],
+    ["status", "x"],
+    ["zettel", "fleeting"],
   ]);
 
   const url = item.getField("url");
   if (url) {
-    properties.set("URL", url);
+    properties.set("url", url);
   }
   const doi = item.getField("DOI");
   if (doi !== null && doi !== undefined && doi !== "") {
-    properties.set("DOI", `https://doi.org/${doi}`);
+    properties.set("doi", `https://doi.org/${doi}`);
   }
   const publisher =
     item.getField("publisher") || item.getField("publicationTitle");
   if (publisher !== null && publisher !== undefined && publisher !== "") {
-    properties.set("Publisher", `[[${publisher}]]`);
+    properties.set("publisher", `[[${publisher}]]`);
   }
-  properties.set("Zotero App Link", `zotero://select/library/items/${key}`);
+  properties.set("zotero-app-link", `zotero://select/library/items/${key}`);
   properties.set(
-    "Zotero Web Link",
+    "zotero-web-link",
     `https://www.zotero.org/${ZOTERO_USERNAME}/items/${key}`,
   );
   properties.set(
     "tags",
-    Array.from(
-      new Set(["from/zotero", "zettel/fleeting", "x", category, ...tags]),
-    ),
+    Array.from(new Set(["from/zotero", category, ...tags])),
   );
 
   const reserved = new Set([
@@ -135,20 +143,20 @@ async function formatNote(fileName, title, item) {
     "doi",
     "publisher",
     "source",
-    "zettel",
-    "status",
+    "kind",
     "category",
-    "document tags",
+    "document-tags",
   ]);
   const attachmentNames = new Map();
   for (const [name, link] of await webLinkProperties(item)) {
-    const normalized = name.toLowerCase();
+    const normalized = propertyKey(name);
     if (reserved.has(normalized)) {
       throw new Error(
         `Web-link attachment property conflicts with metadata: ${name}`,
       );
     }
-    const firstName = attachmentNames.get(normalized);
+    const identity = name.toLowerCase();
+    const firstName = attachmentNames.get(identity);
     if (firstName !== undefined) {
       const current = properties.get(firstName);
       properties.set(firstName, [
@@ -156,8 +164,13 @@ async function formatNote(fileName, title, item) {
         link,
       ]);
     } else {
-      attachmentNames.set(normalized, name);
-      properties.set(name, link);
+      if (properties.has(normalized)) {
+        throw new Error(
+          `Web-link attachment titles normalize to the same property: ${name}`,
+        );
+      }
+      attachmentNames.set(identity, normalized);
+      properties.set(normalized, link);
     }
   }
 

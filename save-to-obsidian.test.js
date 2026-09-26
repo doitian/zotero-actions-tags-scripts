@@ -147,7 +147,7 @@ test("all book metadata is frontmatter; body keeps title and abstract", async ()
     aliases: ["@axler2020LinearAlgebra"],
     authors: ["[[Sheldon Axler]]"],
     "full-title": "Linear Algebra Done Right",
-    date: "[[2020-05]]",
+    published: "[[2020-05]]",
     created: "[[2024-02-29]]",
     url: "https://linear.axler.net/",
     doi: "https://doi.org/10.123/example",
@@ -185,7 +185,7 @@ test("missing metadata uses null/empty lists without fabricated links", async ()
     makeItem({ creators: [], fields: { date: "", citationKey: "" } }),
   );
   expect(properties.authors).toBeNull();
-  expect(properties.date).toBeNull();
+  expect(properties.published).toBeNull();
   expect(properties.aliases).toEqual([]);
   expect(properties).not.toHaveProperty("document-tags");
   expect(properties).not.toHaveProperty("status");
@@ -312,7 +312,7 @@ for (const name of [
   "aliases",
   "TAGS",
   "Authors",
-  "Date",
+  "Published",
   "Full Title",
   "URL",
   "DOI",

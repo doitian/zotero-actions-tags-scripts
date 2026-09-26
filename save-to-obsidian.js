@@ -108,7 +108,7 @@ async function formatNote(fileName, title, item) {
     ["aliases", citationKey ? [`@${citationKey}`] : []],
     ["authors", formatAuthorInMetadata(creators)],
     ["full-title", title],
-    ["date", date ? `[[${date}]]` : null],
+    ["published", date ? `[[${date}]]` : null],
     ["created", `[[${created}]]`],
   ]);
 
